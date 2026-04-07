@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PDF Reader">
+  <meta name="theme-color" content="#1a73e8">
+  <meta name="description" content="Read PDF files aloud with text-to-speech">
+  <title>PDF Reader TTS</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="header">
+      <h1>PDF Reader</h1>
+      <div class="header-actions">
+        <button id="btn-dark-mode" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Landing / File Picker -->
+    <section id="landing" class="screen active">
+      <div class="landing-content">
+        <div class="landing-icon">
+          <svg viewBox="0 0 80 80" width="80" height="80" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="16" y="8" width="48" height="64" rx="4" />
+            <path d="M28 28h24M28 38h24M28 48h16" stroke-linecap="round"/>
+            <circle cx="56" cy="56" r="12" fill="currentColor" stroke="none" opacity="0.15"/>
+            <path d="M52 56l6-4v8z" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <h2>Read PDFs Aloud</h2>
+        <p>Select a PDF file to have it read to you with text-to-speech.</p>
+        <label id="file-picker-label" class="file-picker" tabindex="0">
+          <input type="file" id="file-input" accept=".pdf,application/pdf" />
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+          <span>Choose PDF File</span>
+        </label>
+
+        <!-- Recent bookmarks -->
+        <div id="recent-bookmarks" class="recent-bookmarks hidden">
+          <h3>Recent Documents</h3>
+          <ul id="bookmark-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Reader Screen -->
+    <section id="reader" class="screen">
+      <!-- Document info bar -->
+      <div id="doc-info">
+        <button id="btn-back" class="icon-btn" aria-label="Back to home">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </button>
+        <div class="doc-title-wrap">
+          <span id="doc-title">Document</span>
+          <span id="doc-progress" class="doc-progress"></span>
+        </div>
+        <button id="btn-bookmark" class="icon-btn" aria-label="Bookmark position" title="Save bookmark">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2z"/></svg>
+        </button>
+      </div>
+
+      <!-- Text display area -->
+      <div id="text-display">
+        <div id="paragraphs-container"></div>
+        <div id="loading-indicator" class="hidden">
+          <div class="spinner"></div>
+          <span>Extracting text...</span>
+        </div>
+      </div>
+
+      <!-- Settings Panel (collapsible) -->
+      <div id="settings-panel" class="hidden">
+        <div class="settings-grid">
+          <div class="setting-group">
+            <label for="voice-select">Voice</label>
+            <select id="voice-select"></select>
+          </div>
+          <div class="setting-group">
+            <label for="speed-select">Speed</label>
+            <select id="speed-select">
+              <option value="0.5">0.5x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label for="pitch-select">Pitch</label>
+            <select id="pitch-select">
+              <option value="0.8">Low</option>
+              <option value="1" selected>Normal</option>
+              <option value="1.3">High</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Playback Controls -->
+      <div id="controls">
+        <div class="controls-row">
+          <button id="btn-settings" class="icon-btn" aria-label="Settings" title="Voice settings">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+          </button>
+
+          <button id="btn-prev" class="icon-btn" aria-label="Previous paragraph" title="Previous paragraph">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+
+          <button id="btn-play" class="play-btn" aria-label="Play">
+            <svg id="icon-play" viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="icon-pause" viewBox="0 0 24 24" width="32" height="32" fill="currentColor" class="hidden"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+
+          <button id="btn-next" class="icon-btn" aria-label="Next paragraph" title="Next paragraph">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+
+          <button id="btn-stop" class="icon-btn" aria-label="Stop" title="Stop">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
+  </script>
+</body>
+</html>
